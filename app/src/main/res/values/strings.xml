@@ -102,4 +102,24 @@
 
     <string name="empty_search_title">Ничего не найдено</string>
     <string name="empty_search_message">Попробуйте изменить запрос или сбросить фильтры</string>
+
+    <!-- ===== Экран статистики ===== -->
+    <string name="stats_subtitle">Анализ твоих записей</string>
+    <string name="stats_total_label">Всего записей</string>
+    <string name="stats_total_caption">за всё время</string>
+    <string name="stats_month_label">В этом месяце</string>
+    <string name="stats_top_mood_label">Частое настроение</string>
+    <string name="stats_streak_label">Дней подряд</string>
+    <string name="stats_week_activity">Активность за 7 дней</string>
+    <string name="stats_by_category">По категориям</string>
+
+    <plurals name="streak_days">
+        <item quantity="one">%d день</item>
+        <item quantity="few">%d дня</item>
+        <item quantity="many">%d дней</item>
+        <item quantity="other">%d дня</item>
+    </plurals>
+
+    <string name="empty_stats_title">Статистики пока нет</string>
+    <string name="empty_stats_message">Создайте первую запись — и здесь появятся графики вашего настроения</string>
 </resources>

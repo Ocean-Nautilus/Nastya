@@ -92,6 +92,47 @@ interface EntryDao {
         sortOrder: Int
     ): Flow<List<EntryWithRelations>>
 
+    // ---------- Запросы для экрана статистики ----------
+
+    /**
+     * Сколько записей приходится на каждое настроение.
+     *
+     * Подсчёт делает база: выгружать все записи в память ради того, чтобы
+     * их сосчитать, тем накладнее, чем длиннее дневник.
+     */
+    @Query("SELECT mood, COUNT(*) AS entryCount FROM entries GROUP BY mood ORDER BY entryCount DESC")
+    fun observeMoodCounts(): Flow<List<MoodCount>>
+
+    /**
+     * Количество записей по дням за период.
+     *
+     * Дни без записей в результат не попадают — их добавляет ViewModel,
+     * иначе на диаграмме активности пропали бы пустые столбцы.
+     */
+    @Query(
+        """
+        SELECT entry_date AS dateMillis, COUNT(*) AS entryCount
+        FROM entries
+        WHERE entry_date >= :fromDate
+        GROUP BY entry_date
+        ORDER BY entry_date ASC
+        """
+    )
+    fun observeDailyCounts(fromDate: Long): Flow<List<DailyCount>>
+
+    /** Количество записей начиная с даты — показатель «в этом месяце». */
+    @Query("SELECT COUNT(*) FROM entries WHERE entry_date >= :fromDate")
+    fun observeCountSince(fromDate: Long): Flow<Int>
+
+    /**
+     * Даты записей от новых к старым, без повторов.
+     *
+     * По ним считается серия дней подряд: несколько записей за один день
+     * серию не удлиняют, поэтому дубликаты убираются запросом.
+     */
+    @Query("SELECT DISTINCT entry_date FROM entries ORDER BY entry_date DESC")
+    fun observeDistinctDates(): Flow<List<Long>>
+
     // ---------- Создание, изменение, удаление (Create / Update / Delete) ----------
 
     /**
@@ -118,3 +159,24 @@ interface EntryDao {
     @Query("UPDATE entries SET is_favorite = :isFavorite, updated_at = :updatedAt WHERE id = :entryId")
     suspend fun setFavorite(entryId: Long, isFavorite: Boolean, updatedAt: Long)
 }
+
+/**
+ * Строка результата запроса «сколько записей с каждым настроением».
+ *
+ * Настроение приходит из базы строкой; в перечисление его переводит
+ * преобразователь типов Room.
+ */
+data class MoodCount(
+    val mood: com.nastya.diary.data.model.Mood,
+    val entryCount: Int
+)
+
+/**
+ * Строка результата запроса «сколько записей в конкретный день».
+ *
+ * @property dateMillis дата в миллисекундах, как она хранится в таблице
+ */
+data class DailyCount(
+    val dateMillis: Long,
+    val entryCount: Int
+)

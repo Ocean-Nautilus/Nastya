@@ -3,19 +3,25 @@ package com.nastya.diary.data.repository
 import androidx.room.withTransaction
 import com.nastya.diary.data.database.AppDatabase
 import com.nastya.diary.data.database.dao.CategoryUsage
+import com.nastya.diary.data.database.dao.DailyCount
 import com.nastya.diary.data.database.entity.CategoryEntity
 import com.nastya.diary.data.database.entity.EntryEntity
 import com.nastya.diary.data.database.entity.EntryTagCrossRef
 import com.nastya.diary.data.database.entity.TagEntity
 import com.nastya.diary.data.model.Category
+import com.nastya.diary.data.model.CategoryShare
+import com.nastya.diary.data.model.DailyActivity
 import com.nastya.diary.data.model.DiaryEntry
+import com.nastya.diary.data.model.DiaryStatistics
 import com.nastya.diary.data.model.EntryFilter
 import com.nastya.diary.data.model.Tag
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
@@ -176,6 +182,100 @@ class DiaryRepository(
         }
     }
 
+    // ---------- Статистика ----------
+
+    /**
+     * Сводная статистика дневника.
+     *
+     * Собирается из пяти запросов к базе через [combine]: любое изменение
+     * данных пересчитывает статистику само, и экран обновляется без
+     * ручного перечитывания.
+     */
+    fun observeStatistics(): Flow<DiaryStatistics> {
+        val monthStart = LocalDate.now().withDayOfMonth(1).toEpochMillis()
+        val weekStart = LocalDate.now().minusDays(WEEK_LENGTH - 1).toEpochMillis()
+
+        return combine(
+            entryDao.observeTotalCount(),
+            entryDao.observeCountSince(monthStart),
+            entryDao.observeMoodCounts(),
+            entryDao.observeDailyCounts(weekStart),
+            categoryDao.observeCategoryUsage()
+        ) { total, monthCount, moodCounts, dailyCounts, categoryUsage ->
+            val topMood = moodCounts.maxByOrNull { it.entryCount }
+            DiaryStatistics(
+                totalEntries = total,
+                entriesThisMonth = monthCount,
+                topMood = topMood?.mood,
+                topMoodCount = topMood?.entryCount ?: 0,
+                moodDistribution = moodCounts.associate { it.mood to it.entryCount },
+                weekActivity = buildWeekActivity(dailyCounts),
+                categoryShares = buildCategoryShares(categoryUsage, total)
+            )
+        }
+    }
+
+    /**
+     * Серия дней подряд, в которые есть хотя бы одна запись.
+     *
+     * Отсчёт ведётся от сегодняшнего дня, но допускается и вчерашний старт:
+     * иначе с утра, пока сегодняшней записи ещё нет, серия обнулялась бы,
+     * хотя пользователь ничего не пропустил.
+     */
+    fun observeCurrentStreak(): Flow<Int> = entryDao.observeDistinctDates().map { dates ->
+        if (dates.isEmpty()) return@map 0
+
+        val days = dates.map { millis -> millisToDate(millis) }
+        val today = LocalDate.now()
+        var expected = when (days.first()) {
+            today -> today
+            today.minusDays(1) -> today.minusDays(1)
+            else -> return@map 0
+        }
+
+        var streak = 0
+        for (day in days) {
+            if (day != expected) break
+            streak++
+            expected = expected.minusDays(1)
+        }
+        streak
+    }
+
+    /**
+     * Дополняет данные из базы пустыми днями.
+     *
+     * База возвращает только дни, в которые есть записи. Если оставить как
+     * есть, на диаграмме активности пропали бы дни без записей и соседние
+     * столбцы оказались бы рядом, создавая ложное впечатление регулярности.
+     */
+    private fun buildWeekActivity(dailyCounts: List<DailyCount>): List<DailyActivity> {
+        val countsByDate = dailyCounts.associate { millisToDate(it.dateMillis) to it.entryCount }
+        val firstDay = LocalDate.now().minusDays(WEEK_LENGTH - 1)
+
+        return (0 until WEEK_LENGTH).map { offset ->
+            val date = firstDay.plusDays(offset)
+            DailyActivity(date = date, entryCount = countsByDate[date] ?: 0)
+        }
+    }
+
+    /** Переводит количество записей по категориям в доли для диаграммы. */
+    private fun buildCategoryShares(
+        usage: List<CategoryUsage>,
+        totalEntries: Int
+    ): List<CategoryShare> = usage
+        // Пустые категории на круговой диаграмме занимают место в легенде,
+        // но ничего не показывают, поэтому их не выводим.
+        .filter { it.entryCount > 0 }
+        .map { row ->
+            CategoryShare(
+                categoryName = row.categoryName,
+                categoryColor = row.categoryColor,
+                entryCount = row.entryCount,
+                share = if (totalEntries == 0) 0f else row.entryCount.toFloat() / totalEntries
+            )
+        }
+
     // ---------- Категории ----------
 
     fun observeCategories(): Flow<List<Category>> =
@@ -238,6 +338,15 @@ class DiaryRepository(
      */
     private fun LocalDate.toEpochMillis(): Long =
         atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+    /** Обратное преобразование: миллисекунды из базы → дата. */
+    private fun millisToDate(millis: Long): LocalDate =
+        Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+
+    private companion object {
+        /** Сколько дней показывает диаграмма активности. */
+        const val WEEK_LENGTH = 7L
+    }
 
     /** Переводит доменную запись в строку таблицы `entries`. */
     private fun DiaryEntry.toEntity(createdAt: Long, updatedAt: Long) = EntryEntity(
