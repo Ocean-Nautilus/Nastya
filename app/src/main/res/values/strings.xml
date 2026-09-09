@@ -39,4 +39,33 @@
 
     <!-- ===== Описания для программ чтения с экрана ===== -->
     <string name="content_description_favorite">Избранная запись</string>
+
+    <!-- ===== Экран создания и редактирования записи ===== -->
+    <string name="label_title_required">Заголовок *</string>
+    <string name="label_content">Запись</string>
+    <string name="label_date">Дата</string>
+    <string name="label_mood_required">Настроение *</string>
+    <string name="label_category">Категория</string>
+    <string name="label_tags">Теги</string>
+
+    <string name="hint_title">О чём эта запись?</string>
+    <string name="hint_content">Расскажите, как прошёл день…</string>
+    <string name="hint_new_tag">Добавить тег</string>
+
+    <string name="action_pick_date">Выбрать дату</string>
+    <string name="action_add_tag">Добавить тег</string>
+
+    <!-- Чип настроения: эмодзи и подпись, например «😄 Отлично» -->
+    <string name="mood_chip_template">%1$s %2$s</string>
+
+    <!-- ===== Сообщения валидации ===== -->
+    <string name="error_title_required">Введите заголовок записи</string>
+    <string name="error_title_too_long">Заголовок длиннее 100 символов</string>
+    <string name="error_mood_required">Выберите настроение</string>
+    <string name="error_category_required">Выберите категорию</string>
+    <string name="error_date_in_future">Дата не может быть в будущем</string>
+
+    <!-- ===== Сообщения об успешных действиях ===== -->
+    <string name="message_entry_created">Запись создана</string>
+    <string name="message_entry_updated">Запись сохранена</string>
 </resources>
