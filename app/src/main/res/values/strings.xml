@@ -122,4 +122,19 @@
 
     <string name="empty_stats_title">Статистики пока нет</string>
     <string name="empty_stats_message">Создайте первую запись — и здесь появятся графики вашего настроения</string>
+
+    <!-- ===== Экран настроек ===== -->
+    <string name="settings_theme">Тема оформления</string>
+    <string name="settings_sort">Сортировка записей</string>
+    <string name="settings_date_style">Формат даты в списке</string>
+    <string name="settings_show_preview">Показывать текст записи в списке</string>
+    <string name="settings_version_template">Дневник, версия %1$s</string>
+
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="theme_system">Системная</string>
+
+    <string name="date_style_short">7 сент.</string>
+    <string name="date_style_numeric">07.09.2026</string>
+    <string name="date_style_full">7 сентября 2026 г.</string>
 </resources>

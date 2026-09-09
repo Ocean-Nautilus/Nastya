@@ -1,15 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Каркас экрана «Настройки». Наполняется на следующих неделях по плану разработки. -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Экран 5: настройки приложения. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground"
-    android:padding="@dimen/screen_padding">
+    android:padding="@dimen/screen_padding"
+    android:clipToPadding="false">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="Настройки"
-        android:textAppearance="@style/TextAppearance.Diary.Headline" />
-</FrameLayout>
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/title_settings"
+            android:textAppearance="@style/TextAppearance.Diary.Headline" />
+
+        <!-- ===== Настройка 1: тема оформления ===== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/settings_theme"
+            android:textAppearance="@style/TextAppearance.Diary.SectionLabel" />
+
+        <!-- Три равные кнопки-режима; выбранная выделяется рамкой -->
+        <LinearLayout
+            android:id="@+id/themeSelector"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:orientation="horizontal" />
+
+        <!-- ===== Настройка 2: сортировка по умолчанию ===== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/settings_sort"
+            android:textAppearance="@style/TextAppearance.Diary.SectionLabel" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            app:contentPadding="@dimen/spacing_sm"
+            style="@style/Widget.Diary.Card">
+
+            <RadioGroup
+                android:id="@+id/radioGroupDefaultSort"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Настройка 3: вид даты в списке ===== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/settings_date_style"
+            android:textAppearance="@style/TextAppearance.Diary.SectionLabel" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            app:contentPadding="@dimen/spacing_sm"
+            style="@style/Widget.Diary.Card">
+
+            <RadioGroup
+                android:id="@+id/radioGroupDateStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== Настройка 4: превью текста в списке ===== -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            style="@style/Widget.Diary.Card">
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchShowPreview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_show_preview"
+                android:textAppearance="@style/TextAppearance.Diary.CardTitle"
+                android:textSize="15sp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/tvAppVersion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:layout_marginBottom="@dimen/spacing_lg"
+            android:gravity="center"
+            android:textAppearance="@style/TextAppearance.Diary.Body"
+            android:textSize="12sp"
+            android:alpha="0.6"
+            tools:text="Дневник, версия 1.0" />
+    </LinearLayout>
+</ScrollView>

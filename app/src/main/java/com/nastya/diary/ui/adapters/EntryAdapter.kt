@@ -9,9 +9,9 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.nastya.diary.R
+import com.nastya.diary.data.model.DateDisplayStyle
 import com.nastya.diary.data.model.DiaryEntry
 import com.nastya.diary.databinding.ItemEntryBinding
-import com.nastya.diary.utils.DateFormatter
 
 /**
  * Адаптер списка записей дневника.
@@ -28,6 +28,31 @@ class EntryAdapter(
     private val onEntryClick: (DiaryEntry) -> Unit,
     private val onFavoriteClick: (DiaryEntry) -> Unit = {}
 ) : ListAdapter<DiaryEntry, EntryAdapter.EntryViewHolder>(DIFF_CALLBACK) {
+
+    /**
+     * Как показывать карточку: вид даты и показывать ли превью текста.
+     *
+     * Значения приходят из настроек приложения. При изменении список
+     * перерисовывается целиком — карточек на экране единицы, и это дешевле,
+     * чем поддерживать отдельный механизм частичного обновления.
+     */
+    var displayOptions: DisplayOptions = DisplayOptions()
+        set(value) {
+            if (field == value) return
+            field = value
+            notifyItemRangeChanged(0, itemCount)
+        }
+
+    /**
+     * Настройки отображения карточки.
+     *
+     * @property dateStyle вид даты
+     * @property showPreview показывать ли превью текста записи
+     */
+    data class DisplayOptions(
+        val dateStyle: DateDisplayStyle = DateDisplayStyle.SHORT,
+        val showPreview: Boolean = true
+    )
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EntryViewHolder {
         val binding = ItemEntryBinding.inflate(
@@ -60,16 +85,17 @@ class EntryAdapter(
         }
 
         fun bind(entry: DiaryEntry) = with(binding) {
-            tvDate.text = DateFormatter.short(entry.date)
+            tvDate.text = displayOptions.dateStyle.format(entry.date)
             tvTitle.text = entry.title
             tvCategory.text = entry.category.name
             tvMood.text = entry.mood.emoji
 
-            // Превью показываем, только если в записи есть текст, —
-            // иначе под заголовком осталась бы пустая строка.
+            // Превью показываем, только если оно включено в настройках
+            // и в записи действительно есть текст, — иначе под заголовком
+            // осталась бы пустая строка.
             val preview = entry.preview()
             tvPreview.text = preview
-            tvPreview.isVisible = preview.isNotEmpty()
+            tvPreview.isVisible = displayOptions.showPreview && preview.isNotEmpty()
 
             imgFavorite.isVisible = entry.isFavorite
 

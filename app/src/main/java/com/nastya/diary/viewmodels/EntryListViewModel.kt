@@ -6,7 +6,9 @@ import com.nastya.diary.data.model.Category
 import com.nastya.diary.data.model.DiaryEntry
 import com.nastya.diary.data.model.EntryFilter
 import com.nastya.diary.data.model.Mood
+import com.nastya.diary.data.model.AppSettings
 import com.nastya.diary.data.model.SortOrder
+import com.nastya.diary.data.preferences.SettingsRepository
 import com.nastya.diary.data.repository.DiaryRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -26,11 +28,13 @@ import java.time.LocalDate
  * @property entries записи, прошедшие поиск и фильтры
  * @property filter текущие условия отбора
  * @property categories категории для панели фильтров
+ * @property settings настройки приложения: вид даты и показ превью в карточке
  */
 data class EntryListUiState(
     val entries: List<DiaryEntry> = emptyList(),
     val filter: EntryFilter = EntryFilter(),
     val categories: List<Category> = emptyList(),
+    val settings: AppSettings = AppSettings(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 ) {
@@ -54,7 +58,8 @@ data class EntryListUiState(
  * перезапускается, а список обновляется сам.
  */
 class EntryListViewModel(
-    private val repository: DiaryRepository
+    private val repository: DiaryRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     /** Текущие условия отбора записей. */
@@ -64,8 +69,33 @@ class EntryListViewModel(
     val uiState: StateFlow<EntryListUiState> = _uiState.asStateFlow()
 
     init {
+        applyDefaultSortOrder()
         observeEntries()
         observeCategories()
+        observeSettings()
+    }
+
+    /**
+     * Ставит сортировку, выбранную пользователем в настройках.
+     *
+     * Читается один раз при создании экрана: менять порядок списка прямо под
+     * руками у пользователя, если он поменял настройку в другой вкладке,
+     * было бы неожиданно — новый порядок применится при следующем открытии.
+     */
+    private fun applyDefaultSortOrder() {
+        viewModelScope.launch {
+            runCatching { settingsRepository.getSettings().defaultSortOrder }
+                .onSuccess { sortOrder -> updateFilter { it.copy(sortOrder = sortOrder) } }
+        }
+    }
+
+    /** Вид даты и показ превью применяются сразу, без открытия экрана заново. */
+    private fun observeSettings() {
+        viewModelScope.launch {
+            settingsRepository.settings
+                .catch { /* Настройки не критичны: список работает на значениях по умолчанию. */ }
+                .collect { settings -> _uiState.update { it.copy(settings = settings) } }
+        }
     }
 
     /**

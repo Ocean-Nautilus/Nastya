@@ -40,7 +40,9 @@ class EntryListFragment : Fragment() {
     private val binding get() = requireNotNull(_binding)
 
     private val viewModel: EntryListViewModel by viewModels {
-        ViewModelFactory { EntryListViewModel(diaryApp.diaryRepository) }
+        ViewModelFactory {
+            EntryListViewModel(diaryApp.diaryRepository, diaryApp.settingsRepository)
+        }
     }
 
     private lateinit var adapter: EntryAdapter
@@ -180,6 +182,12 @@ class EntryListFragment : Fragment() {
             state.isEmpty -> showEmptyState()
             state.isNothingFound -> showNothingFoundState()
         }
+
+        // Вид даты и показ превью приходят из настроек приложения.
+        adapter.displayOptions = EntryAdapter.DisplayOptions(
+            dateStyle = state.settings.dateDisplayStyle,
+            showPreview = state.settings.showPreview
+        )
 
         renderMoodChips(state.filter.mood)
         renderFilterBadge(state.filter.activeFilterCount)

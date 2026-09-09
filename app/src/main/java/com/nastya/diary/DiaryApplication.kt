@@ -2,6 +2,7 @@ package com.nastya.diary
 
 import android.app.Application
 import com.nastya.diary.data.database.AppDatabase
+import com.nastya.diary.data.preferences.SettingsRepository
 import com.nastya.diary.data.repository.DiaryRepository
 
 /**
@@ -19,4 +20,14 @@ class DiaryApplication : Application() {
 
     /** Репозиторий записей — источник данных для всех ViewModel. */
     val diaryRepository: DiaryRepository by lazy { DiaryRepository(database) }
+
+    /** Репозиторий настроек приложения. */
+    val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        // Тема применяется до создания первого экрана, иначе приложение
+        // мигнуло бы светлым оформлением перед переключением на тёмное.
+        settingsRepository.applySavedTheme()
+    }
 }
