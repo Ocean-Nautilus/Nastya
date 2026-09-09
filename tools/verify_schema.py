@@ -230,6 +230,31 @@ def test_full_text_search(connection):
     ]
     check("поиск по слову «парк» находит запись", found, ["Отличное утро в парке"])
 
+    # Токенизатор unicode61 обязан приводить регистр кириллицы: с
+    # токенизатором по умолчанию этот запрос не нашёл бы ничего.
+    for query in ("ПАРК*", "Парк*", "парк*"):
+        found = [
+            row[0]
+            for row in connection.execute(
+                "SELECT e.id FROM entries e JOIN entries_fts f ON f.docid = e.id "
+                "WHERE entries_fts MATCH ?",
+                (query,),
+            )
+        ]
+        check(f"регистр не влияет на поиск: {query}", found, [1])
+
+    # Запрос из нескольких слов означает «И» и не зависит от их порядка.
+    for query in ("кофе* скамейке*", "скамейке* кофе*"):
+        found = [
+            row[0]
+            for row in connection.execute(
+                "SELECT e.id FROM entries e JOIN entries_fts f ON f.docid = e.id "
+                "WHERE entries_fts MATCH ?",
+                (query,),
+            )
+        ]
+        check(f"несколько слов = И: {query}", found, [1])
+
     found = [
         row[0]
         for row in connection.execute(

@@ -186,7 +186,8 @@ class EntryListFragment : Fragment() {
         // Вид даты и показ превью приходят из настроек приложения.
         adapter.displayOptions = EntryAdapter.DisplayOptions(
             dateStyle = state.settings.dateDisplayStyle,
-            showPreview = state.settings.showPreview
+            showPreview = state.settings.showPreview,
+            searchQuery = state.filter.query
         )
 
         renderMoodChips(state.filter.mood)

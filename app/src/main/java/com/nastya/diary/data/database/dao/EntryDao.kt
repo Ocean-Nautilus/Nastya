@@ -54,12 +54,19 @@ interface EntryDao {
      * компиляции. Приём с `:параметр IS NULL OR ...` означает «фильтр не
      * задан — условие не применяется».
      *
+     * Поиск идёт через виртуальную таблицу `entries_fts`, а не через
+     * `LIKE '%...%'`: подзапрос отдаёт номера подходящих строк из
+     * инвертированного индекса, поэтому таблица записей не перебирается
+     * целиком. Строку запроса готовит
+     * [com.nastya.diary.utils.SearchQueryBuilder] — сырой пользовательский
+     * ввод в `MATCH` передавать нельзя.
+     *
      * Сортировка выбирается выражениями `CASE` внутри `ORDER BY`: сработает
      * ровно одна ветка, остальные вернут NULL и на порядок не повлияют.
      * Дополнительное `e.id DESC` в конце нужно, чтобы записи с одинаковой
      * датой не меняли порядок между обновлениями списка.
      *
-     * @param query строка поиска; пустая строка отключает поиск
+     * @param query подготовленный запрос FTS; пустая строка отключает поиск
      * @param mood имя настроения или `null`
      * @param categoryId идентификатор категории или `null`
      * @param fromDate начало периода в миллисекундах или `null`
@@ -70,8 +77,8 @@ interface EntryDao {
     @Query(
         """
         SELECT * FROM entries e
-        WHERE (:query = '' OR e.title LIKE '%' || :query || '%'
-                          OR e.content LIKE '%' || :query || '%')
+        WHERE (:query = '' OR e.id IN (
+                SELECT rowid FROM entries_fts WHERE entries_fts MATCH :query))
           AND (:mood IS NULL OR e.mood = :mood)
           AND (:categoryId IS NULL OR e.category_id = :categoryId)
           AND (:fromDate IS NULL OR e.entry_date >= :fromDate)

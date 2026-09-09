@@ -137,4 +137,12 @@
     <string name="date_style_short">7 сент.</string>
     <string name="date_style_numeric">07.09.2026</string>
     <string name="date_style_full">7 сентября 2026 г.</string>
+
+    <!-- ===== Экспорт дневника в PDF ===== -->
+    <string name="settings_data">Данные</string>
+    <string name="settings_export_pdf">Экспорт в PDF</string>
+    <string name="settings_export_pdf_caption">Скачать все записи одним файлом</string>
+    <string name="export_share_title">Сохранить дневник</string>
+    <string name="export_ready">Дневник выгружен в PDF</string>
+    <string name="export_no_app">На телефоне нет приложения, которое откроет PDF</string>
 </resources>

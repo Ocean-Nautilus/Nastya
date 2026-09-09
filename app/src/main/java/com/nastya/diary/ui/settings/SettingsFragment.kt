@@ -1,5 +1,7 @@
 package com.nastya.diary.ui.settings
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -7,6 +9,8 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -26,6 +30,7 @@ import com.nastya.diary.utils.showMessage
 import com.nastya.diary.viewmodels.SettingsUiState
 import com.nastya.diary.viewmodels.SettingsViewModel
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * Экран 5 — настройки приложения.
@@ -40,7 +45,13 @@ class SettingsFragment : Fragment() {
     private val binding get() = requireNotNull(_binding)
 
     private val viewModel: SettingsViewModel by viewModels {
-        ViewModelFactory { SettingsViewModel(diaryApp.settingsRepository) }
+        ViewModelFactory {
+            SettingsViewModel(
+                settingsRepository = diaryApp.settingsRepository,
+                diaryRepository = diaryApp.diaryRepository,
+                pdfExporter = diaryApp.pdfExporter
+            )
+        }
     }
 
     /** Кнопки выбора темы, чтобы не искать их заново при каждой перерисовке. */
@@ -61,6 +72,7 @@ class SettingsFragment : Fragment() {
         buildSortOptions()
         buildDateStyleOptions()
         setupPreviewSwitch()
+        setupExport()
         showAppVersion()
         observeUiState()
     }
@@ -123,6 +135,10 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    private fun setupExport() {
+        binding.cardExportPdf.setOnClickListener { viewModel.onExportToPdfClicked() }
+    }
+
     private fun showAppVersion() {
         binding.tvAppVersion.text =
             getString(R.string.settings_version_template, BuildConfig.VERSION_NAME)
@@ -145,6 +161,17 @@ class SettingsFragment : Fragment() {
     private fun render(state: SettingsUiState) {
         if (state.isLoading) return
         renderSettings(state.settings)
+
+        // Пока идёт выгрузка, стрелка сменяется индикатором, а карточка
+        // не реагирует на нажатия — чтобы не запустить экспорт дважды.
+        binding.progressExport.isVisible = state.isExporting
+        binding.imgExportArrow.isVisible = !state.isExporting
+        binding.cardExportPdf.isEnabled = !state.isExporting
+
+        state.exportedFile?.let { file ->
+            viewModel.onExportHandled()
+            sharePdf(file)
+        }
 
         state.errorMessage?.let { message ->
             showMessage(message)
@@ -174,6 +201,38 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    /**
+     * Открывает системный диалог «Поделиться» для готового документа.
+     *
+     * Файл отдаётся через [FileProvider]: начиная с Android 7 передать
+     * другому приложению обычный путь `file://` нельзя — система бросит
+     * исключение. Провайдер выдаёт временную ссылку с правом чтения,
+     * действующую только на время этого намерения.
+     */
+    private fun sharePdf(file: File) {
+        val uri = FileProvider.getUriForFile(
+            requireContext(),
+            "${requireContext().packageName}.fileprovider",
+            file
+        )
+
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = PDF_MIME_TYPE
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.export_share_title))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        // Подходящего приложения может не оказаться — сообщаем об этом,
+        // а не падаем с необработанным исключением.
+        try {
+            startActivity(Intent.createChooser(shareIntent, getString(R.string.export_share_title)))
+            showMessage(getString(R.string.export_ready))
+        } catch (error: ActivityNotFoundException) {
+            showMessage(getString(R.string.export_no_app))
+        }
+    }
+
     /** Отмечает в группе переключатель, метка которого совпадает со значением. */
     private fun checkOption(group: android.widget.RadioGroup, value: Any) {
         (0 until group.childCount)
@@ -185,5 +244,9 @@ class SettingsFragment : Fragment() {
         super.onDestroyView()
         themeOptions.clear()
         _binding = null
+    }
+
+    private companion object {
+        const val PDF_MIME_TYPE = "application/pdf"
     }
 }

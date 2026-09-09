@@ -12,6 +12,7 @@ import com.nastya.diary.R
 import com.nastya.diary.data.model.DateDisplayStyle
 import com.nastya.diary.data.model.DiaryEntry
 import com.nastya.diary.databinding.ItemEntryBinding
+import com.nastya.diary.utils.TextHighlighter
 
 /**
  * Адаптер списка записей дневника.
@@ -51,7 +52,9 @@ class EntryAdapter(
      */
     data class DisplayOptions(
         val dateStyle: DateDisplayStyle = DateDisplayStyle.SHORT,
-        val showPreview: Boolean = true
+        val showPreview: Boolean = true,
+        /** Текущий поисковый запрос — по нему подсвечиваются совпадения. */
+        val searchQuery: String = ""
     )
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EntryViewHolder {
@@ -86,7 +89,16 @@ class EntryAdapter(
 
         fun bind(entry: DiaryEntry) = with(binding) {
             tvDate.text = displayOptions.dateStyle.format(entry.date)
-            tvTitle.text = entry.title
+            // Совпадения с поисковым запросом выделяются прямо в списке,
+            // иначе пользователю пришлось бы искать их глазами.
+            val highlightColor = TextHighlighter.highlightColor(
+                ContextCompat.getColor(root.context, R.color.brand_purple)
+            )
+            tvTitle.text = TextHighlighter.highlight(
+                entry.title,
+                displayOptions.searchQuery,
+                highlightColor
+            )
             tvCategory.text = entry.category.name
             tvMood.text = entry.mood.emoji
 
@@ -94,7 +106,11 @@ class EntryAdapter(
             // и в записи действительно есть текст, — иначе под заголовком
             // осталась бы пустая строка.
             val preview = entry.preview()
-            tvPreview.text = preview
+            tvPreview.text = TextHighlighter.highlight(
+                preview,
+                displayOptions.searchQuery,
+                highlightColor
+            )
             tvPreview.isVisible = displayOptions.showPreview && preview.isNotEmpty()
 
             imgFavorite.isVisible = entry.isFavorite

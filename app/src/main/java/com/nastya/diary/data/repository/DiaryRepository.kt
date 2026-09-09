@@ -15,6 +15,7 @@ import com.nastya.diary.data.model.DiaryEntry
 import com.nastya.diary.data.model.DiaryStatistics
 import com.nastya.diary.data.model.EntryFilter
 import com.nastya.diary.data.model.Tag
+import com.nastya.diary.utils.SearchQueryBuilder
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -64,13 +65,16 @@ class DiaryRepository(
     /**
      * Поток записей, отобранных по поиску, фильтрам и сортировке.
      *
+     * Строка поиска перед передачей в базу превращается в запрос FTS: сырой
+     * ввод пользователя (кавычки, дефисы, скобки) сломал бы синтаксис `MATCH`.
+     *
      * Даты переводятся в миллисекунды тем же способом, что и при сохранении
      * (полночь по UTC), иначе граница периода сдвигалась бы на часовой пояс
      * и записи «выпадали» бы из выборки на сутки.
      */
     fun observeEntries(filter: EntryFilter): Flow<List<DiaryEntry>> =
         entryDao.observeFiltered(
-            query = filter.query.trim(),
+            query = SearchQueryBuilder.build(filter.query),
             mood = filter.mood?.name,
             categoryId = filter.categoryId,
             fromDate = filter.fromDate?.toEpochMillis(),

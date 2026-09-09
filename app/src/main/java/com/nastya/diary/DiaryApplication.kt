@@ -4,6 +4,7 @@ import android.app.Application
 import com.nastya.diary.data.database.AppDatabase
 import com.nastya.diary.data.preferences.SettingsRepository
 import com.nastya.diary.data.repository.DiaryRepository
+import com.nastya.diary.utils.PdfExporter
 
 /**
  * Класс приложения.
@@ -23,6 +24,9 @@ class DiaryApplication : Application() {
 
     /** Репозиторий настроек приложения. */
     val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
+
+    /** Генератор PDF для экспорта дневника. */
+    val pdfExporter: PdfExporter by lazy { PdfExporter(this) }
 
     override fun onCreate() {
         super.onCreate()
