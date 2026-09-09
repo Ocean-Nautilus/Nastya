@@ -46,6 +46,52 @@ interface EntryDao {
     @Query("SELECT COUNT(*) FROM entries")
     fun observeTotalCount(): Flow<Int>
 
+    /**
+     * Записи, отобранные по поиску, фильтрам и порядку сортировки.
+     *
+     * Все условия описаны одним запросом, а не собираются из кусков строк:
+     * так параметры подставляются безопасно, а Room проверяет запрос при
+     * компиляции. Приём с `:параметр IS NULL OR ...` означает «фильтр не
+     * задан — условие не применяется».
+     *
+     * Сортировка выбирается выражениями `CASE` внутри `ORDER BY`: сработает
+     * ровно одна ветка, остальные вернут NULL и на порядок не повлияют.
+     * Дополнительное `e.id DESC` в конце нужно, чтобы записи с одинаковой
+     * датой не меняли порядок между обновлениями списка.
+     *
+     * @param query строка поиска; пустая строка отключает поиск
+     * @param mood имя настроения или `null`
+     * @param categoryId идентификатор категории или `null`
+     * @param fromDate начало периода в миллисекундах или `null`
+     * @param toDate конец периода в миллисекундах или `null`
+     * @param sortOrder номер режима сортировки, см. [com.nastya.diary.data.model.SortOrder]
+     */
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM entries e
+        WHERE (:query = '' OR e.title LIKE '%' || :query || '%'
+                          OR e.content LIKE '%' || :query || '%')
+          AND (:mood IS NULL OR e.mood = :mood)
+          AND (:categoryId IS NULL OR e.category_id = :categoryId)
+          AND (:fromDate IS NULL OR e.entry_date >= :fromDate)
+          AND (:toDate IS NULL OR e.entry_date <= :toDate)
+        ORDER BY
+            CASE WHEN :sortOrder = 0 THEN e.entry_date END DESC,
+            CASE WHEN :sortOrder = 1 THEN e.entry_date END ASC,
+            CASE WHEN :sortOrder = 2 THEN e.title END COLLATE NOCASE ASC,
+            e.id DESC
+        """
+    )
+    fun observeFiltered(
+        query: String,
+        mood: String?,
+        categoryId: Long?,
+        fromDate: Long?,
+        toDate: Long?,
+        sortOrder: Int
+    ): Flow<List<EntryWithRelations>>
+
     // ---------- Создание, изменение, удаление (Create / Update / Delete) ----------
 
     /**

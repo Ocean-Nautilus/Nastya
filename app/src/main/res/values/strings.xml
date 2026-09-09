@@ -80,4 +80,26 @@
     <string name="dialog_delete_message">Запись будет удалена из дневника. Сразу после удаления действие ещё можно будет отменить.</string>
     <string name="message_entry_deleted">Запись удалена</string>
     <string name="action_undo">Отменить</string>
+
+    <!-- ===== Поиск, фильтры и сортировка ===== -->
+    <string name="hint_search">Поиск записей</string>
+    <string name="action_filters">Фильтры</string>
+    <string name="filters_title">Фильтры</string>
+    <string name="filter_all">Все</string>
+    <string name="label_period">Период</string>
+    <string name="label_sort">Сортировка</string>
+    <string name="period_any">Любой период</string>
+    <string name="period_template">%1$s — %2$s</string>
+    <string name="period_from">С %1$s</string>
+    <string name="period_to">По %1$s</string>
+    <string name="action_clear_filters">Сбросить</string>
+    <string name="action_apply">Применить</string>
+    <string name="action_reset_search">Сбросить поиск и фильтры</string>
+
+    <string name="sort_date_desc">Сначала новые</string>
+    <string name="sort_date_asc">Сначала старые</string>
+    <string name="sort_title_asc">По заголовку</string>
+
+    <string name="empty_search_title">Ничего не найдено</string>
+    <string name="empty_search_message">Попробуйте изменить запрос или сбросить фильтры</string>
 </resources>

@@ -9,12 +9,15 @@ import com.nastya.diary.data.database.entity.EntryTagCrossRef
 import com.nastya.diary.data.database.entity.TagEntity
 import com.nastya.diary.data.model.Category
 import com.nastya.diary.data.model.DiaryEntry
+import com.nastya.diary.data.model.EntryFilter
 import com.nastya.diary.data.model.Tag
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 /**
  * Единая точка доступа к данным дневника.
@@ -51,6 +54,23 @@ class DiaryRepository(
     /** Поток всех записей дневника, сначала новые. */
     fun observeEntries(): Flow<List<DiaryEntry>> =
         entryDao.observeAll().map { rows -> rows.map { it.toDomain() } }
+
+    /**
+     * Поток записей, отобранных по поиску, фильтрам и сортировке.
+     *
+     * Даты переводятся в миллисекунды тем же способом, что и при сохранении
+     * (полночь по UTC), иначе граница периода сдвигалась бы на часовой пояс
+     * и записи «выпадали» бы из выборки на сутки.
+     */
+    fun observeEntries(filter: EntryFilter): Flow<List<DiaryEntry>> =
+        entryDao.observeFiltered(
+            query = filter.query.trim(),
+            mood = filter.mood?.name,
+            categoryId = filter.categoryId,
+            fromDate = filter.fromDate?.toEpochMillis(),
+            toDate = filter.toDate?.toEpochMillis(),
+            sortOrder = filter.sortOrder.sqlValue
+        ).map { rows -> rows.map { it.toDomain() } }
 
     /** Поток одной записи; отдаёт `null`, если запись удалили. */
     fun observeEntry(entryId: Long): Flow<DiaryEntry?> =
@@ -211,6 +231,13 @@ class DiaryRepository(
 
         tagDao.insertCrossRefs(crossRefs)
     }
+
+    /**
+     * Дата → число миллисекунд, ровно так же, как это делает
+     * [com.nastya.diary.data.database.Converters] при сохранении записи.
+     */
+    private fun LocalDate.toEpochMillis(): Long =
+        atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
     /** Переводит доменную запись в строку таблицы `entries`. */
     private fun DiaryEntry.toEntity(createdAt: Long, updatedAt: Long) = EntryEntity(

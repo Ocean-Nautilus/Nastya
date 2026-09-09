@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -12,8 +13,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.chip.Chip
 import com.nastya.diary.R
 import com.nastya.diary.data.model.DiaryEntry
+import com.nastya.diary.data.model.Mood
 import com.nastya.diary.databinding.FragmentEntryListBinding
 import com.nastya.diary.ui.adapters.EntryAdapter
 import com.nastya.diary.ui.detail.EntryDetailFragment
@@ -55,6 +58,8 @@ class EntryListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         setupListeners()
+        setupMoodFilterChips()
+        observeFilterResult()
         observeUiState()
         observeDeleteResult()
     }
@@ -75,7 +80,52 @@ class EntryListFragment : Fragment() {
 
     private fun setupListeners() {
         binding.fabAddEntry.setOnClickListener { openEditor() }
-        binding.emptyStateContainer.btnEmptyAction.setOnClickListener { openEditor() }
+
+        binding.etSearch.doAfterTextChanged { text ->
+            viewModel.onSearchQueryChanged(text?.toString().orEmpty())
+        }
+
+        binding.btnFilters.setOnClickListener {
+            val state = viewModel.uiState.value
+            FilterBottomSheet.show(this, state.filter, state.categories)
+        }
+    }
+
+    /**
+     * Создаёт чипы быстрого фильтра по настроению.
+     *
+     * Первый чип «Все» снимает фильтр, остальные строятся из перечисления
+     * [Mood], поэтому список настроений задан ровно в одном месте.
+     */
+    private fun setupMoodFilterChips() {
+        val group = binding.chipGroupMoodFilter
+        group.addView(createMoodChip(getString(R.string.filter_all), null))
+        Mood.values().forEach { mood ->
+            val label = getString(R.string.mood_chip_template, mood.emoji, getString(mood.labelRes))
+            group.addView(createMoodChip(label, mood))
+        }
+    }
+
+    private fun createMoodChip(label: String, mood: Mood?): Chip = Chip(requireContext()).apply {
+        id = View.generateViewId()
+        text = label
+        isCheckable = true
+        tag = mood ?: ALL_MOODS_TAG
+        setChipBackgroundColorResource(R.color.surface_input)
+        setOnClickListener { viewModel.onMoodFilterSelected(mood) }
+    }
+
+    /** Принимает фильтр, выбранный в нижней панели. */
+    private fun observeFilterResult() {
+        childFragmentManager.setFragmentResultListener(
+            FilterBottomSheet.REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, result ->
+            val filter = FilterBottomSheet.filterFromResult(result)
+            viewModel.onCategoryFilterSelected(filter.categoryId)
+            viewModel.onDateRangeSelected(filter.fromDate, filter.toDate)
+            viewModel.onSortOrderSelected(filter.sortOrder)
+        }
     }
 
     /**
@@ -118,7 +168,7 @@ class EntryListFragment : Fragment() {
     private fun render(state: EntryListUiState) {
         binding.progressIndicator.isVisible = state.isLoading
         binding.recyclerEntries.isVisible = !state.isLoading && state.entries.isNotEmpty()
-        binding.emptyStateContainer.root.isVisible = state.isEmpty
+        binding.emptyStateContainer.root.isVisible = state.isEmpty || state.isNothingFound
 
         binding.tvEntryCount.text = resources.getQuantityString(
             R.plurals.entries_count,
@@ -126,9 +176,13 @@ class EntryListFragment : Fragment() {
             state.totalCount
         )
 
-        if (state.isEmpty) {
-            showEmptyState()
+        when {
+            state.isEmpty -> showEmptyState()
+            state.isNothingFound -> showNothingFoundState()
         }
+
+        renderMoodChips(state.filter.mood)
+        renderFilterBadge(state.filter.activeFilterCount)
 
         adapter.submitList(state.entries)
 
@@ -140,10 +194,50 @@ class EntryListFragment : Fragment() {
 
     /** Заполняет заглушку, которая видна, пока в дневнике нет ни одной записи. */
     private fun showEmptyState() = with(binding.emptyStateContainer) {
-        tvEmptyTitle.text = getString(R.string.empty_entries_title)
-        tvEmptyMessage.text = getString(R.string.empty_entries_message)
-        btnEmptyAction.text = getString(R.string.empty_entries_action)
+        imgEmpty.setImageResource(R.drawable.ic_notebook_empty)
+        tvEmptyTitle.setText(R.string.empty_entries_title)
+        tvEmptyMessage.setText(R.string.empty_entries_message)
+        btnEmptyAction.setText(R.string.empty_entries_action)
         btnEmptyAction.isVisible = true
+        btnEmptyAction.setOnClickListener { openEditor() }
+    }
+
+    /**
+     * Заглушка, когда под поиск и фильтры не подошла ни одна запись.
+     *
+     * Отличается от пустого дневника: здесь записи есть, и полезнее
+     * предложить сбросить условия отбора, а не создать новую запись.
+     */
+    private fun showNothingFoundState() = with(binding.emptyStateContainer) {
+        imgEmpty.setImageResource(R.drawable.ic_search_off)
+        tvEmptyTitle.setText(R.string.empty_search_title)
+        tvEmptyMessage.setText(R.string.empty_search_message)
+        btnEmptyAction.setText(R.string.action_reset_search)
+        btnEmptyAction.isVisible = true
+        btnEmptyAction.setOnClickListener {
+            binding.etSearch.text?.clear()
+            viewModel.onSearchAndFiltersCleared()
+        }
+    }
+
+    /** Подсвечивает выбранный чип настроения. */
+    private fun renderMoodChips(selected: Mood?) {
+        val group = binding.chipGroupMoodFilter
+        (0 until group.childCount)
+            .mapNotNull { index -> group.getChildAt(index) as? Chip }
+            .forEach { chip ->
+                chip.isChecked = chip.tag == (selected ?: ALL_MOODS_TAG)
+            }
+    }
+
+    /**
+     * Показывает число активных фильтров на кнопке.
+     *
+     * Без этого список, отфильтрованный по категории и периоду, выглядел бы
+     * так, будто записей просто мало.
+     */
+    private fun renderFilterBadge(activeCount: Int) {
+        binding.btnFilters.text = if (activeCount > 0) activeCount.toString() else ""
     }
 
     /** Открывает детальный просмотр записи. */
@@ -158,6 +252,11 @@ class EntryListFragment : Fragment() {
         findNavController().navigate(
             EntryListFragmentDirections.actionListToEditor()
         )
+    }
+
+    private companion object {
+        /** Метка чипа «Все настроения» — у остальных чипов меткой служит сам Mood. */
+        const val ALL_MOODS_TAG = "all_moods"
     }
 
     override fun onDestroyView() {

@@ -30,6 +30,76 @@
         app:layout_constraintStart_toStartOf="parent"
         tools:text="7 записей" />
 
+    <!-- ===== Поиск и фильтры ===== -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilSearch"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/spacing_md"
+        app:boxBackgroundColor="?attr/colorSurfaceVariant"
+        app:boxCornerRadiusTopStart="@dimen/radius_input"
+        app:boxCornerRadiusTopEnd="@dimen/radius_input"
+        app:boxCornerRadiusBottomStart="@dimen/radius_input"
+        app:boxCornerRadiusBottomEnd="@dimen/radius_input"
+        app:startIconDrawable="@drawable/ic_search"
+        app:endIconMode="clear_text"
+        style="@style/Widget.Material3.TextInputLayout.FilledBox"
+        app:layout_constraintTop_toBottomOf="@id/tvEntryCount"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnFilters">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_search"
+            android:inputType="text"
+            android:imeOptions="actionSearch"
+            android:maxLines="1" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Кнопка панели фильтров; значок показывает число активных фильтров -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnFilters"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_marginStart="@dimen/spacing_sm"
+        android:layout_marginEnd="@dimen/screen_padding"
+        android:contentDescription="@string/action_filters"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        app:icon="@drawable/ic_tune"
+        app:iconGravity="textStart"
+        app:iconPadding="0dp"
+        app:cornerRadius="@dimen/radius_input"
+        style="@style/Widget.Material3.Button.TonalButton"
+        app:layout_constraintTop_toTopOf="@id/tilSearch"
+        app:layout_constraintBottom_toBottomOf="@id/tilSearch"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Быстрый фильтр по настроению: чипы создаются в коде из Mood -->
+    <HorizontalScrollView
+        android:id="@+id/scrollMoodFilter"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/spacing_sm"
+        android:paddingStart="@dimen/screen_padding"
+        android:paddingEnd="@dimen/screen_padding"
+        android:clipToPadding="false"
+        android:scrollbars="none"
+        app:layout_constraintTop_toBottomOf="@id/tilSearch"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupMoodFilter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleLine="true"
+            app:singleSelection="true" />
+    </HorizontalScrollView>
+
     <!-- Индикатор первой загрузки данных из базы -->
     <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/progressIndicator"
@@ -37,7 +107,7 @@
         android:layout_height="wrap_content"
         android:indeterminate="true"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/tvEntryCount"
+        app:layout_constraintTop_toBottomOf="@id/scrollMoodFilter"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -52,7 +122,7 @@
         android:paddingStart="@dimen/screen_padding"
         android:paddingEnd="@dimen/screen_padding"
         android:paddingBottom="@dimen/list_bottom_padding"
-        app:layout_constraintTop_toBottomOf="@id/tvEntryCount"
+        app:layout_constraintTop_toBottomOf="@id/scrollMoodFilter"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -66,7 +136,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/tvEntryCount"
+        app:layout_constraintTop_toBottomOf="@id/scrollMoodFilter"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

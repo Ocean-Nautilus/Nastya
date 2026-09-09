@@ -303,6 +303,51 @@ def test_statistics(connection):
     )
 
 
+# Запрос, которым EntryDao отбирает записи: поиск, три фильтра и сортировка.
+FILTER_QUERY = """
+SELECT e.title FROM entries e
+WHERE (:query = '' OR e.title LIKE '%' || :query || '%'
+                  OR e.content LIKE '%' || :query || '%')
+  AND (:mood IS NULL OR e.mood = :mood)
+  AND (:categoryId IS NULL OR e.category_id = :categoryId)
+  AND (:fromDate IS NULL OR e.entry_date >= :fromDate)
+  AND (:toDate IS NULL OR e.entry_date <= :toDate)
+ORDER BY
+    CASE WHEN :sortOrder = 0 THEN e.entry_date END DESC,
+    CASE WHEN :sortOrder = 1 THEN e.entry_date END ASC,
+    CASE WHEN :sortOrder = 2 THEN e.title END COLLATE NOCASE ASC,
+    e.id DESC
+"""
+
+
+def test_filters(connection):
+    """Проверяет поиск, фильтрацию и сортировку — запрос EntryDao.observeFiltered."""
+    print("\n[8] Поиск, фильтры и сортировка")
+
+    def run(**overrides):
+        params = dict(
+            query="", mood=None, categoryId=None,
+            fromDate=None, toDate=None, sortOrder=0
+        )
+        params.update(overrides)
+        return [row[0] for row in connection.execute(FILTER_QUERY, params)]
+
+    check("сортировка: сначала новые", run(sortOrder=0)[0], "Отличное утро в парке")
+    check("сортировка: сначала старые", run(sortOrder=1)[0], "Планы на отпуск")
+    check("сортировка по заголовку", run(sortOrder=2)[0], "Отличное утро в парке")
+    check("поиск по тексту записи", run(query="скамейке"), ["Отличное утро в парке"])
+    check("поиск по заголовку", run(query="пробежка"), ["Пробежка пять километров"])
+    check("поиск без совпадений", run(query="вертолёт"), [])
+    check("фильтр по настроению", len(run(mood="GREAT")), 2)
+    check("фильтр по категории", len(run(categoryId=1)), 3)
+    check("фильтр по периоду дат", len(run(fromDate=millis(2), toDate=millis(1))), 2)
+    check(
+        "фильтры работают вместе",
+        run(query="отпуск", categoryId=1, mood="GREAT"),
+        ["Планы на отпуск"]
+    )
+
+
 def main():
     connection = build_database()
     seed(connection)
@@ -314,6 +359,7 @@ def main():
     test_cascade(connection)
     test_full_text_search(connection)
     test_statistics(connection)
+    test_filters(connection)
 
     print(f"\nИтог: успешно {passed}, с ошибками {failed}")
     return 1 if failed else 0
