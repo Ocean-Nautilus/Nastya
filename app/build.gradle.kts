@@ -75,6 +75,7 @@ dependencies {
     // --- Архитектура MVVM ---
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.livedata.ktx)
 
     // --- Навигация между экранами ---
     implementation(libs.androidx.navigation.fragment.ktx)

@@ -87,6 +87,19 @@ class EntryListViewModel(
         }
     }
 
+    /**
+     * Восстанавливает последнюю удалённую запись.
+     *
+     * Вызывается по нажатию «Отменить» в сообщении, которое появляется после
+     * возврата с экрана удалённой записи.
+     */
+    fun undoDelete() {
+        viewModelScope.launch {
+            repository.restoreLastDeletedEntry()
+                .onFailure { error -> showError(error.message ?: RESTORE_ERROR) }
+        }
+    }
+
     /** Убирает сообщение об ошибке после того, как пользователь его увидел. */
     fun onErrorShown() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
@@ -98,5 +111,6 @@ class EntryListViewModel(
 
     private companion object {
         const val UNKNOWN_ERROR = "Не удалось загрузить записи"
+        const val RESTORE_ERROR = "Не удалось восстановить запись"
     }
 }

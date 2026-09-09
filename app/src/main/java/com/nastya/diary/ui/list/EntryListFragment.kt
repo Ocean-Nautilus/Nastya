@@ -16,6 +16,7 @@ import com.nastya.diary.R
 import com.nastya.diary.data.model.DiaryEntry
 import com.nastya.diary.databinding.FragmentEntryListBinding
 import com.nastya.diary.ui.adapters.EntryAdapter
+import com.nastya.diary.ui.detail.EntryDetailFragment
 import com.nastya.diary.utils.ViewModelFactory
 import com.nastya.diary.utils.diaryApp
 import com.nastya.diary.utils.showMessage
@@ -55,6 +56,7 @@ class EntryListFragment : Fragment() {
         setupRecyclerView()
         setupListeners()
         observeUiState()
+        observeDeleteResult()
     }
 
     private fun setupRecyclerView() {
@@ -74,6 +76,28 @@ class EntryListFragment : Fragment() {
     private fun setupListeners() {
         binding.fabAddEntry.setOnClickListener { openEditor() }
         binding.emptyStateContainer.btnEmptyAction.setOnClickListener { openEditor() }
+    }
+
+    /**
+     * Слушает результат удаления записи с экрана детального просмотра.
+     *
+     * Сообщение с кнопкой «Отменить» показывает именно список: экран записи
+     * к этому моменту уже закрыт, и показать его там было бы негде.
+     */
+    private fun observeDeleteResult() {
+        val savedStateHandle = findNavController().currentBackStackEntry?.savedStateHandle ?: return
+        savedStateHandle.getLiveData<Boolean>(EntryDetailFragment.RESULT_ENTRY_DELETED)
+            .observe(viewLifecycleOwner) { wasDeleted ->
+                if (wasDeleted != true) return@observe
+                // Значение сбрасывается сразу: иначе сообщение появлялось бы
+                // снова при каждом возврате на этот экран.
+                savedStateHandle[EntryDetailFragment.RESULT_ENTRY_DELETED] = false
+                showMessage(
+                    message = getString(R.string.message_entry_deleted),
+                    actionLabel = getString(R.string.action_undo),
+                    action = viewModel::undoDelete
+                )
+            }
     }
 
     /**

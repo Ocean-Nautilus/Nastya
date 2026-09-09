@@ -68,4 +68,16 @@
     <!-- ===== Сообщения об успешных действиях ===== -->
     <string name="message_entry_created">Запись создана</string>
     <string name="message_entry_updated">Запись сохранена</string>
+
+    <!-- ===== Экран детального просмотра записи ===== -->
+    <string name="detail_empty_content">В этой записи нет текста</string>
+    <string name="detail_updated_at">Изменено %1$s</string>
+    <string name="detail_missing_title">Запись не найдена</string>
+    <string name="detail_missing_message">Похоже, её уже удалили</string>
+
+    <!-- ===== Удаление записи ===== -->
+    <string name="dialog_delete_title">Удалить запись?</string>
+    <string name="dialog_delete_message">Запись будет удалена из дневника. Сразу после удаления действие ещё можно будет отменить.</string>
+    <string name="message_entry_deleted">Запись удалена</string>
+    <string name="action_undo">Отменить</string>
 </resources>

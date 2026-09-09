@@ -39,6 +39,13 @@ class DiaryRepository(
     private val categoryDao = database.categoryDao()
     private val tagDao = database.tagDao()
 
+    /**
+     * Последняя удалённая запись — держится в памяти, чтобы удаление можно
+     * было отменить. Переживать перезапуск приложения ей незачем: отмена
+     * имеет смысл только сразу после нажатия.
+     */
+    private var lastDeletedEntry: DiaryEntry? = null
+
     // ---------- Записи ----------
 
     /** Поток всех записей дневника, сначала новые. */
@@ -108,15 +115,39 @@ class DiaryRepository(
      *
      * Связи с тегами уходят сами — за это отвечает `ON DELETE CASCADE`
      * в промежуточной таблице.
+     *
+     * Перед удалением запись запоминается в [lastDeletedEntry], чтобы
+     * пользователь мог отменить действие нажатием «Отменить» в сообщении.
      */
     suspend fun deleteEntry(entryId: Long): Result<Unit> = runCatching {
         withContext(dispatcher) {
+            val entry = entryDao.getById(entryId)?.toDomain()
             database.withTransaction {
                 entryDao.deleteById(entryId)
                 tagDao.deleteUnusedTags()
             }
+            lastDeletedEntry = entry
         }
     }
+
+    /**
+     * Восстанавливает последнюю удалённую запись.
+     *
+     * Запись создаётся заново со всеми полями и тегами, но получает новый
+     * идентификатор: строка в таблице была удалена, а не скрыта. Для
+     * пользователя разницы нет — на экране та же запись.
+     *
+     * @return `true`, если было что восстанавливать
+     */
+    suspend fun restoreLastDeletedEntry(): Result<Boolean> = runCatching {
+        val entry = lastDeletedEntry ?: return@runCatching false
+        createEntry(entry.copy(id = 0L)).getOrThrow()
+        lastDeletedEntry = null
+        true
+    }
+
+    /** Есть ли запись, удаление которой ещё можно отменить. */
+    fun hasRestorableEntry(): Boolean = lastDeletedEntry != null
 
     /** Помечает запись избранной или снимает пометку. */
     suspend fun setFavorite(entryId: Long, isFavorite: Boolean): Result<Unit> = runCatching {
