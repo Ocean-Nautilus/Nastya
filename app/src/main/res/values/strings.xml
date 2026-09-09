@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Дневник</string>
+
+    <!-- Настроения (см. перечисление Mood) -->
+    <string name="mood_great">Отлично</string>
+    <string name="mood_good">Хорошо</string>
+    <string name="mood_neutral">Нейтрально</string>
+    <string name="mood_sad">Грустно</string>
+    <string name="mood_angry">Злость</string>
+</resources>
