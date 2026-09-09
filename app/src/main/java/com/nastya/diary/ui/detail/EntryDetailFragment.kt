@@ -151,14 +151,15 @@ class EntryDetailFragment : Fragment() {
      * Цвет приходит из базы строкой, поэтому при некорректном значении
      * подставляем цвет темы: неверно записанный цвет не должен ронять экран.
      */
-    private fun createChip(label: String, colorValue: String): Chip = Chip(requireContext()).apply {
-        text = label
-        isCheckable = false
-        isClickable = false
-        setChipBackgroundColorResource(R.color.surface_input)
+    private fun createChip(label: String, colorValue: String): Chip {
+        val group = binding.chipGroupTags
+        val chip = layoutInflater.inflate(R.layout.item_display_chip, group, false) as Chip
+
+        chip.text = label
         val color = runCatching { Color.parseColor(colorValue) }
             .getOrElse { ContextCompat.getColor(requireContext(), R.color.brand_purple) }
-        setTextColor(color)
+        chip.setTextColor(color)
+        return chip
     }
 
     /** Заглушка на случай, если запись уже удалена, а экран остался открытым. */

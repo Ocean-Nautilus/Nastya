@@ -107,17 +107,25 @@ class EntryEditorFragment : Fragment() {
     /** Создаёт чипы настроений один раз — их список задан перечислением [Mood]. */
     private fun setupMoodChips() {
         Mood.values().forEach { mood ->
-            val chip = Chip(requireContext()).apply {
+            val chip = newChip(binding.chipGroupMood).apply {
                 id = View.generateViewId()
                 text = getString(R.string.mood_chip_template, mood.emoji, getString(mood.labelRes))
-                isCheckable = true
                 tag = mood
-                setChipBackgroundColorResource(R.color.surface_input)
                 setOnClickListener { viewModel.onMoodSelected(mood) }
             }
             binding.chipGroupMood.addView(chip)
         }
     }
+
+    /**
+     * Раздувает чип из заготовки `item_filter_chip`.
+     *
+     * Стиль нельзя передать в конструктор Chip, а без стиля к чипу не
+     * применяются списки состояний — выбранный чип выглядел бы так же,
+     * как невыбранный.
+     */
+    private fun newChip(parent: ViewGroup): Chip =
+        layoutInflater.inflate(R.layout.item_filter_chip, parent, false) as Chip
 
     private fun setupButtons() = with(binding) {
         btnSave.setOnClickListener { viewModel.save() }
@@ -196,12 +204,10 @@ class EntryEditorFragment : Fragment() {
         if (group.childCount != categories.size) {
             group.removeAllViews()
             categories.forEach { category ->
-                val chip = Chip(requireContext()).apply {
+                val chip = newChip(group).apply {
                     id = View.generateViewId()
                     text = category.name
-                    isCheckable = true
                     tag = category.id
-                    setChipBackgroundColorResource(R.color.surface_input)
                     setOnClickListener { viewModel.onCategorySelected(category.id) }
                 }
                 group.addView(chip)
@@ -216,12 +222,10 @@ class EntryEditorFragment : Fragment() {
         if (group.childCount != state.availableTags.size) {
             group.removeAllViews()
             state.availableTags.forEach { tag ->
-                val chip = Chip(requireContext()).apply {
+                val chip = newChip(group).apply {
                     id = View.generateViewId()
                     text = tag.name
-                    isCheckable = true
                     this.tag = tag.name
-                    setChipBackgroundColorResource(R.color.surface_input)
                     setOnClickListener { viewModel.onTagToggled(tag.name) }
                 }
                 group.addView(chip)

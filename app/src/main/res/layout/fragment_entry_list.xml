@@ -59,7 +59,15 @@
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Кнопка панели фильтров; значок показывает число активных фильтров -->
+    <!--
+        Кнопка панели фильтров.
+
+        minWidth и minHeight обнулены намеренно: у стиля кнопки Material
+        минимальная ширина 88dp, и она перебивала заданные 52dp — кнопка
+        разрасталась и наезжала на строку поиска. Текста на кнопке тоже нет:
+        счётчик фильтров вынесен в отдельный значок ниже, иначе кнопка снова
+        начала бы расширяться под него.
+    -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnFilters"
         android:layout_width="52dp"
@@ -67,16 +75,39 @@
         android:layout_marginStart="@dimen/spacing_sm"
         android:layout_marginEnd="@dimen/screen_padding"
         android:contentDescription="@string/action_filters"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:insetLeft="0dp"
+        android:insetRight="0dp"
         android:insetTop="0dp"
         android:insetBottom="0dp"
+        android:paddingStart="0dp"
+        android:paddingEnd="0dp"
         app:icon="@drawable/ic_tune"
         app:iconGravity="textStart"
         app:iconPadding="0dp"
+        app:iconSize="22dp"
         app:cornerRadius="@dimen/radius_input"
         style="@style/Widget.Material3.Button.TonalButton"
         app:layout_constraintTop_toTopOf="@id/tilSearch"
         app:layout_constraintBottom_toBottomOf="@id/tilSearch"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Счётчик активных фильтров: виден, только когда фильтры включены -->
+    <TextView
+        android:id="@+id/tvFilterBadge"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:background="@drawable/bg_filter_badge"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/btnFilters"
+        app:layout_constraintEnd_toEndOf="@id/btnFilters"
+        tools:text="2"
+        tools:visibility="visible" />
 
     <!-- Быстрый фильтр по настроению: чипы создаются в коде из Mood -->
     <HorizontalScrollView

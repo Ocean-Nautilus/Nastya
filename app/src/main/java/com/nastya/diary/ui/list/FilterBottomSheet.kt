@@ -109,17 +109,25 @@ class FilterBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private fun createCategoryChip(label: String, categoryId: Long?): Chip =
-        Chip(requireContext()).apply {
-            text = label
-            isCheckable = true
-            isChecked = draft.categoryId == categoryId
-            setChipBackgroundColorResource(R.color.surface_input)
-            setOnClickListener {
-                draft = draft.copy(categoryId = categoryId)
-                renderCategories()
-            }
+    /**
+     * Создаёт чип категории из заготовки `item_filter_chip`.
+     *
+     * Стиль нельзя задать конструктором Chip, а без него к чипу не
+     * применяются списки состояний, и выбранная категория ничем не
+     * отличалась бы от остальных.
+     */
+    private fun createCategoryChip(label: String, categoryId: Long?): Chip {
+        val group = binding.chipGroupCategoryFilter
+        val chip = layoutInflater.inflate(R.layout.item_filter_chip, group, false) as Chip
+
+        chip.text = label
+        chip.isChecked = draft.categoryId == categoryId
+        chip.setOnClickListener {
+            draft = draft.copy(categoryId = categoryId)
+            renderCategories()
         }
+        return chip
+    }
 
     private fun renderSortOptions() {
         val group = binding.radioGroupSort

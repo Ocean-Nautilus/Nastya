@@ -108,13 +108,25 @@ class EntryListFragment : Fragment() {
         }
     }
 
-    private fun createMoodChip(label: String, mood: Mood?): Chip = Chip(requireContext()).apply {
-        id = View.generateViewId()
-        text = label
-        isCheckable = true
-        tag = mood ?: ALL_MOODS_TAG
-        setChipBackgroundColorResource(R.color.surface_input)
-        setOnClickListener { viewModel.onMoodFilterSelected(mood) }
+    /**
+     * Создаёт чип фильтра из заготовки `item_filter_chip`.
+     *
+     * Чип раздувается из разметки, а не создаётся конструктором: стиль классу
+     * в конструкторе задать нельзя, а без стиля к чипу не применяются списки
+     * состояний — и выбранный чип выглядит точно так же, как невыбранный.
+     */
+    private fun createMoodChip(label: String, mood: Mood?): Chip {
+        val chip = layoutInflater.inflate(
+            R.layout.item_filter_chip,
+            binding.chipGroupMoodFilter,
+            false
+        ) as Chip
+
+        chip.id = View.generateViewId()
+        chip.text = label
+        chip.tag = mood ?: ALL_MOODS_TAG
+        chip.setOnClickListener { viewModel.onMoodFilterSelected(mood) }
+        return chip
     }
 
     /** Принимает фильтр, выбранный в нижней панели. */
@@ -246,7 +258,10 @@ class EntryListFragment : Fragment() {
      * так, будто записей просто мало.
      */
     private fun renderFilterBadge(activeCount: Int) {
-        binding.btnFilters.text = if (activeCount > 0) activeCount.toString() else ""
+        // Счётчик — отдельный кружок поверх кнопки. Текст на самой кнопке
+        // заставлял бы её расширяться и наезжать на строку поиска.
+        binding.tvFilterBadge.isVisible = activeCount > 0
+        binding.tvFilterBadge.text = activeCount.toString()
     }
 
     /** Открывает детальный просмотр записи. */
