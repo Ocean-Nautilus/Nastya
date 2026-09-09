@@ -24,4 +24,19 @@
     <string name="action_delete">Удалить</string>
     <string name="action_back">Назад</string>
     <string name="action_add_entry">Добавить запись</string>
+
+    <!-- ===== Экран списка записей ===== -->
+    <string name="list_screen_title">Мой дневник</string>
+    <plurals name="entries_count">
+        <item quantity="one">%d запись</item>
+        <item quantity="few">%d записи</item>
+        <item quantity="many">%d записей</item>
+        <item quantity="other">%d записи</item>
+    </plurals>
+    <string name="empty_entries_title">Записей пока нет</string>
+    <string name="empty_entries_message">Расскажите, как прошёл ваш день — первая запись всегда самая сложная</string>
+    <string name="empty_entries_action">Создать первую запись</string>
+
+    <!-- ===== Описания для программ чтения с экрана ===== -->
+    <string name="content_description_favorite">Избранная запись</string>
 </resources>
