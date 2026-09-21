@@ -7,9 +7,18 @@
 
    Как работать в SSMS: выполнять блоки ПО ОЧЕРЕДИ (выделить блок -> F5),
    а не весь файл сразу — ошибочные запуски специально прерывают пакет.
+
+   Процедуры создаются связкой «удалить, если есть» + CREATE PROCEDURE.
+   Конструкция CREATE OR ALTER PROCEDURE из лекции работает только
+   в SQL Server 2016 SP1 и новее, а такой вариант выполняется на любой
+   версии. Заодно файл можно перезапускать сколько угодно раз.
    ===================================================================== */
 
 USE Archive_Muzi;
+GO
+
+/* Версия сервера — полезно знать, какие конструкции он поддерживает */
+SELECT @@VERSION AS SqlServerVersion;
 GO
 
 
@@ -18,7 +27,11 @@ GO
    Каждое утро оператор смотрит одно и то же — какое оборудование свободно.
    ##################################################################### */
 
-CREATE OR ALTER PROCEDURE dbo.usp_ShowAvailableEquipment
+IF OBJECT_ID('dbo.usp_ShowAvailableEquipment', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.usp_ShowAvailableEquipment;
+GO
+
+CREATE PROCEDURE dbo.usp_ShowAvailableEquipment
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -53,7 +66,11 @@ GO
    Оператору нужны аренды не всех клиентов, а одного выбранного.
    ##################################################################### */
 
-CREATE OR ALTER PROCEDURE dbo.usp_ShowRentalsByClient
+IF OBJECT_ID('dbo.usp_ShowRentalsByClient', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.usp_ShowRentalsByClient;
+GO
+
+CREATE PROCEDURE dbo.usp_ShowRentalsByClient
     @client_id INT
 AS
 BEGIN
@@ -102,7 +119,11 @@ GO
    нет ли уже клиента с таким телефоном.
    ##################################################################### */
 
-CREATE OR ALTER PROCEDURE dbo.usp_AddClient
+IF OBJECT_ID('dbo.usp_AddClient', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.usp_AddClient;
+GO
+
+CREATE PROCEDURE dbo.usp_AddClient
     @full_name NVARCHAR(150),
     @phone     NVARCHAR(20),
     @email     NVARCHAR(100) = NULL,
@@ -153,12 +174,16 @@ GO
 
 /* #####################################################################
    ЗАДАНИЕ 4. OUTPUT-ПАРАМЕТР С ID СОЗДАННОГО КЛИЕНТА
-   Дополняем ту же процедуру через CREATE OR ALTER: после INSERT
+   Пересоздаём ту же процедуру в дополненном виде: после INSERT
    приложению нужен номер новой записи — возвращаем его через OUTPUT.
    Заодно добавляем TRY...CATCH (задание 6) и проверку пустого ФИО.
    ##################################################################### */
 
-CREATE OR ALTER PROCEDURE dbo.usp_AddClient
+IF OBJECT_ID('dbo.usp_AddClient', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.usp_AddClient;
+GO
+
+CREATE PROCEDURE dbo.usp_AddClient
     @full_name     NVARCHAR(150),
     @phone         NVARCHAR(20),
     @email         NVARCHAR(100) = NULL,
@@ -250,7 +275,11 @@ GO
    без TRY...CATCH (его добавим в задании 6).
    ##################################################################### */
 
-CREATE OR ALTER PROCEDURE dbo.usp_AddPayment
+IF OBJECT_ID('dbo.usp_AddPayment', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.usp_AddPayment;
+GO
+
+CREATE PROCEDURE dbo.usp_AddPayment
     @rental_id      INT,
     @amount         DECIMAL(18,2),
     @payment_type   NVARCHAR(30) = N'Оплата аренды',
@@ -336,7 +365,11 @@ GO
    и внутри самого INSERT — тогда нужны транзакция и TRY...CATCH.
    ##################################################################### */
 
-CREATE OR ALTER PROCEDURE dbo.usp_AddPayment
+IF OBJECT_ID('dbo.usp_AddPayment', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.usp_AddPayment;
+GO
+
+CREATE PROCEDURE dbo.usp_AddPayment
     @rental_id      INT,
     @amount         DECIMAL(18,2),
     @payment_type   NVARCHAR(30) = N'Оплата аренды',
@@ -431,7 +464,11 @@ GO
    поэтому они внутри одной транзакции.
    ##################################################################### */
 
-CREATE OR ALTER PROCEDURE dbo.usp_CloseRental
+IF OBJECT_ID('dbo.usp_CloseRental', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.usp_CloseRental;
+GO
+
+CREATE PROCEDURE dbo.usp_CloseRental
     @rental_id INT,
     @end_date  DATE = NULL
 AS
