@@ -34,6 +34,7 @@ public class FileBrowserController : MonoBehaviour
         foreach (string filePath in files)
         {
             Button btn = Instantiate(fileButtonPrefab, contentParent);
+            btn.gameObject.SetActive(true);
             string capturedPath = filePath;
 
             TMP_Text label = btn.GetComponentInChildren<TMP_Text>();
