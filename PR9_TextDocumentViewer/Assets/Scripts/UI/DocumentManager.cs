@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using UnityEngine;
 using TMPro;
@@ -17,21 +18,39 @@ public class DocumentManager : MonoBehaviour
 
     private TextDocument currentDocument;
     private string currentFilePath = "";
+    private bool isModified;
 
-    // Папка для документов пользователя. Application.dataPath (старый вариант)
-    // недоступен для записи в билде на многих платформах - persistentDataPath
-    // предназначен для этого специально и работает везде.
+    // Сообщение в строке статуса ("Сохранено", "Найдено 1 из 3" и т.п.)
+    private string statusMessage = "";
+
+    // Состояние поиска - для перехода к следующему совпадению при повторном нажатии
+    private string lastSearchTerm = "";
+    private int lastSearchIndex = -1;
+
+    // Папка для документов пользователя.
+    // В редакторе - Assets/Documents (там лежит пример документа).
+    // В билде Application.dataPath на многих платформах недоступен для записи,
+    // поэтому используется persistentDataPath - он предназначен как раз для этого.
+#if UNITY_EDITOR
+    public string DocumentsFolder => Path.Combine(Application.dataPath, defaultDocumentsPath);
+#else
     public string DocumentsFolder => Path.Combine(Application.persistentDataPath, defaultDocumentsPath);
+#endif
 
     void Start()
     {
         Directory.CreateDirectory(DocumentsFolder);
 
-        // Создаем новый документ при старте
-        CreateNewDocument();
+        if (textInputField != null)
+        {
+            // Без этого выделение сбрасывается, как только фокус уходит на кнопку
+            // (Bold, Italic, Поиск...), и форматирование/подсветка не работают
+            textInputField.resetOnDeActivation = false;
+            textInputField.onFocusSelectAll = false;
+        }
 
-        // Обновляем интерфейс
-        UpdateUI();
+        // Создаем новый документ при старте (внутри уже обновляется интерфейс)
+        CreateNewDocument();
     }
 
     // Создание нового документа
@@ -39,6 +58,9 @@ public class DocumentManager : MonoBehaviour
     {
         currentDocument = new TextDocument();
         currentFilePath = "";
+        isModified = false;
+        ResetSearch();
+        SetStatusMessage("Создан новый документ");
         UpdateUI();
 
         Debug.Log("Создан новый документ");
@@ -54,6 +76,8 @@ public class DocumentManager : MonoBehaviour
 
         LoadFromPath(path);
 #else
+        SetStatusMessage("Открытие файлов доступно только в редакторе Unity");
+        UpdateStatus();
         Debug.LogWarning("Системный диалог выбора файла доступен только при запуске в редакторе Unity. Для готового билда нужен отдельный файловый браузер внутри интерфейса.");
 #endif
     }
@@ -62,6 +86,8 @@ public class DocumentManager : MonoBehaviour
     {
         if (!File.Exists(filePath))
         {
+            SetStatusMessage("Файл не найден");
+            UpdateStatus();
             Debug.LogWarning("Файл не найден: " + filePath);
             return;
         }
@@ -71,14 +97,20 @@ public class DocumentManager : MonoBehaviour
             currentDocument = new TextDocument();
             currentDocument.content = File.ReadAllText(filePath);
             currentDocument.documentName = Path.GetFileName(filePath);
+            currentDocument.filePath = filePath;
             currentFilePath = filePath;
             currentDocument.UpdateStatistics();
+            isModified = false;
+            ResetSearch();
 
+            SetStatusMessage("Документ открыт");
             UpdateUI();
             Debug.Log("Документ загружен: " + filePath);
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
+            SetStatusMessage("Ошибка загрузки: " + e.Message);
+            UpdateStatus();
             Debug.LogError("Ошибка загрузки: " + e.Message);
         }
     }
@@ -105,7 +137,9 @@ public class DocumentManager : MonoBehaviour
 
         SaveToFile(path);
 #else
-        Debug.LogWarning("Системный диалог сохранения доступен только при запуске в редакторе Unity. Для готового билда нужен отдельный экран ввода имени файла.");
+        // В билде диалога нет - сохраняем в папку документов под текущим именем
+        string fileName = currentDocument.documentName.EndsWith(".txt") ? currentDocument.documentName : currentDocument.documentName + ".txt";
+        SaveToFile(Path.Combine(DocumentsFolder, fileName));
 #endif
     }
 
@@ -115,32 +149,49 @@ public class DocumentManager : MonoBehaviour
         {
             // Создаем директорию если не существует
             string directory = Path.GetDirectoryName(filePath);
-            if (!Directory.Exists(directory))
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
+            }
+
+            // Берём текст прямо из поля, чтобы не потерять последние изменения
+            if (textInputField != null)
+            {
+                currentDocument.content = textInputField.text;
             }
 
             // Сохраняем файл
             File.WriteAllText(filePath, currentDocument.content);
             currentFilePath = filePath;
+            currentDocument.filePath = filePath;
             currentDocument.documentName = Path.GetFileName(filePath);
+            isModified = false;
 
-            UpdateUI();
+            SetStatusMessage("Сохранено: " + currentDocument.documentName);
+            UpdateTitle();
+            UpdateStatus();
             Debug.Log("Документ сохранен: " + filePath);
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
+            SetStatusMessage("Ошибка сохранения: " + e.Message);
+            UpdateStatus();
             Debug.LogError("Ошибка сохранения: " + e.Message);
         }
     }
 
-    // Обновление содержимого документа из UI
+    // Обновление содержимого документа из UI (вызывается из On Value Changed поля ввода)
     public void OnTextChanged()
     {
         if (currentDocument != null && textInputField != null)
         {
             currentDocument.content = textInputField.text;
             currentDocument.UpdateStatistics();
+            isModified = true;
+            statusMessage = "";
+            ResetSearch();
+
+            UpdateTitle();
             UpdateStatus();
         }
     }
@@ -150,15 +201,22 @@ public class DocumentManager : MonoBehaviour
     {
         if (textInputField != null)
         {
-            textInputField.text = currentDocument.content;
+            // Без уведомления: иначе сработает OnTextChanged и только что
+            // открытый документ сразу будет помечен как изменённый
+            textInputField.SetTextWithoutNotify(currentDocument.content);
         }
 
-        if (titleText != null)
-        {
-            titleText.text = currentDocument.documentName + (string.IsNullOrEmpty(currentFilePath) ? " *" : "");
-        }
-
+        UpdateTitle();
         UpdateStatus();
+    }
+
+    // Заголовок: имя документа и "*", если есть несохранённые изменения
+    private void UpdateTitle()
+    {
+        if (titleText != null && currentDocument != null)
+        {
+            titleText.text = currentDocument.documentName + (isModified ? " *" : "");
+        }
     }
 
     // Обновление статусной строки
@@ -166,30 +224,84 @@ public class DocumentManager : MonoBehaviour
     {
         if (statusText != null && currentDocument != null)
         {
-            statusText.text = $"Символов: {currentDocument.characterCount} | Слов: {currentDocument.wordCount} | Строк: {currentDocument.lineCount}";
+            string stats = $"Символов: {currentDocument.characterCount} | Слов: {currentDocument.wordCount} | Строк: {currentDocument.lineCount}";
+            statusText.text = string.IsNullOrEmpty(statusMessage) ? stats : stats + " | " + statusMessage;
         }
     }
 
-    // Поиск текста с видимой подсветкой
+    private void SetStatusMessage(string message)
+    {
+        statusMessage = message;
+    }
+
+    // Сброс поиска: следующий поиск начнётся с начала текста
+    public void ResetSearch()
+    {
+        lastSearchTerm = "";
+        lastSearchIndex = -1;
+    }
+
+    // Поиск текста с подсветкой найденного фрагмента.
+    // Без учёта регистра; повторный поиск той же строки переходит
+    // к следующему совпадению, после последнего - снова к первому.
     public void SearchText(string searchTerm)
     {
-        if (string.IsNullOrEmpty(searchTerm) || textInputField == null)
+        if (textInputField == null)
             return;
 
+        if (string.IsNullOrEmpty(searchTerm))
+        {
+            SetStatusMessage("Введите текст для поиска");
+            UpdateStatus();
+            return;
+        }
+
         string content = textInputField.text;
-        int index = content.IndexOf(searchTerm);
-        if (index >= 0)
+
+        int startFrom = 0;
+        if (string.Equals(searchTerm, lastSearchTerm, StringComparison.OrdinalIgnoreCase) && lastSearchIndex >= 0)
         {
-            // Активируем поле перед выделением - иначе подсветка невидима,
-            // если фокус остался на кнопке "Найти"
-            textInputField.ActivateInputField();
-            textInputField.Select();
-            textInputField.selectionAnchorPosition = index;
-            textInputField.selectionFocusPosition = index + searchTerm.Length;
+            startFrom = Mathf.Min(lastSearchIndex + searchTerm.Length, content.Length);
         }
-        else
+
+        int index = content.IndexOf(searchTerm, startFrom, StringComparison.OrdinalIgnoreCase);
+        if (index < 0 && startFrom > 0)
         {
+            // Дошли до конца - начинаем сначала
+            index = content.IndexOf(searchTerm, 0, StringComparison.OrdinalIgnoreCase);
+        }
+
+        lastSearchTerm = searchTerm;
+        lastSearchIndex = index;
+
+        if (index < 0)
+        {
+            SetStatusMessage($"«{searchTerm}» не найдено");
+            UpdateStatus();
             Debug.Log("Текст не найден: " + searchTerm);
+            return;
         }
+
+        int total = CountOccurrences(content, searchTerm, content.Length);
+        int number = CountOccurrences(content, searchTerm, index) + 1;
+        SetStatusMessage($"Найдено: {number} из {total}");
+        UpdateStatus();
+
+        // Поле ввода получает фокус только в следующем кадре,
+        // поэтому выделение ставится через корутину
+        StartCoroutine(InputFieldSelection.Select(textInputField, index, index + searchTerm.Length));
+    }
+
+    // Количество совпадений, начинающихся до позиции limit
+    private static int CountOccurrences(string content, string searchTerm, int limit)
+    {
+        int count = 0;
+        int index = content.IndexOf(searchTerm, 0, StringComparison.OrdinalIgnoreCase);
+        while (index >= 0 && index < limit)
+        {
+            count++;
+            index = content.IndexOf(searchTerm, index + searchTerm.Length, StringComparison.OrdinalIgnoreCase);
+        }
+        return count;
     }
 }
